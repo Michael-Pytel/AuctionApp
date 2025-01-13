@@ -1,0 +1,69 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="listings-container">
+    {% if watched_listings %}
+        <h2 class="title">Your Watchlist</h2>
+        <hr>
+        
+        <div class="listings-grid">
+            {% for listing in watched_listings %}
+            <article class="listing-card">
+                <a href="{% url 'listingPage' listing.id%}" class="listing-link">
+                    <!-- Image Section -->
+                    <div class="listing-image">
+                        {% if listing.imageUrl %}
+                        <img src="{{ listing.imageUrl }}" alt="{{ listing.title }}" loading="lazy">
+                        {% else %}
+                        <img src="https://assets.fishersci.com/TFS-Assets/CCG/product-images/default.jpg-650.jpg" 
+                             alt="Default product image" loading="lazy">
+                        {% endif %}
+                        
+                        <!-- Price Badge -->
+                        {% if listing.max_bid %}
+                        <span class="price-badge bid-price">${{ listing.max_bid }}</span>
+                        {% else %}
+                        <span class="price-badge start-price">${{ listing.primary_price }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Content Section -->
+                    <div class="listing-content">
+                        <div class="listing-header">
+                            <h3>{{ listing.title }}</h3>
+                            <p class="listing-owner">Listed by {{ listing.owner }}</p>
+                        </div>
+
+                        <p class="listing-description">{{ listing.description|truncatechars:100 }}</p>
+
+                        <!-- Footer Section -->
+                        <div class="listing-footer">
+                            {% if listing.category %}
+                            <span class="category-tag">{{ listing.category }}</span>
+                            {% endif %}
+                            <span class="time-ago">{{ listing.updated|timesince }} ago</span>
+                        </div>
+                    </div>
+                </a>
+                <!-- Watchlist Remove Button -->
+                <div class="watchlist-actions">
+                    <form action="{% url 'removeWatchlist' listing.id %}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="watchlist-remove">
+                            <i class="fas fa-heart"></i> Remove from Watchlist
+                        </button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-heart empty-icon"></i>
+            <h2>Your Watchlist is Empty</h2>
+            <p>Items you add to your watchlist will appear here</p>
+            <a href="{% url 'index' %}" class="browse-link">Browse Active Listings</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

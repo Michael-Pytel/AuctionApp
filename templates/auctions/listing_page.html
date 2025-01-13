@@ -1,0 +1,163 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="listing-detail-container">
+    <!-- Main Content -->
+    <div class="listing-detail-content">
+        <!-- Image and Primary Info Section -->
+        <div class="listing-header-section">
+            <div class="listing-image-container">
+                {% if listing_page.imageUrl %}
+                <img src="{{ listing_page.imageUrl }}" alt="{{ listing_page.title }}" class="listing-main-image">
+                {% else %}
+                <img src="https://assets.fishersci.com/TFS-Assets/CCG/product-images/default.jpg-650.jpg" 
+                     alt="Default product image" class="listing-main-image">
+                {% endif %}
+            </div>
+
+            <div class="listing-primary-info">
+                <div class="listing-title-section">
+                    <h1>{{ listing_page.title }}</h1>
+                    <div class="listing-meta">
+                        <span class="listing-time">Posted {{ listing_page.created|timesince }} ago</span>
+                        {% if listing_page.category %}
+                        <span class="listing-category">{{ listing_page.category }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="listing-price-section">
+                    {% if last_bid %}
+                    <div class="current-bid">
+                        <span class="price-label">Current Bid</span>
+                        <span class="price-amount">${{ last_bid.amount }}</span>
+                    </div>
+                    {% else %}
+                    <div class="starting-price">
+                        <span class="price-label">Starting Price</span>
+                        <span class="price-amount">${{ listing_page.primary_price }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="listing-actions">
+                    {% if request.user.is_authenticated %}
+                        {% if request.user == listing_page.owner %}
+                            <form action="{% url 'AuctionControl' listing_page.id %}" method="POST" class="action-form">
+                                {% csrf_token %}
+                                <button type="submit" class="action-button {% if listing_page.is_active %}close-button{% else %}activate-button{% endif %}">
+                                    {% if listing_page.is_active %}
+                                        <i class="fas fa-times-circle"></i> Close Auction
+                                    {% else %}
+                                        <i class="fas fa-play-circle"></i> Activate Auction
+                                    {% endif %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <form action="{% if is_in_watchlist %}{% url 'removeWatchlist' listing_page.id %}{% else %}{% url 'addWatchlist' listing_page.id %}{% endif %}" 
+                                  method="POST" class="action-form">
+                                {% csrf_token %}
+                                <button type="submit" class="action-button {% if is_in_watchlist %}remove-watchlist{% else %}add-watchlist{% endif %}">
+                                    <i class="fas {% if is_in_watchlist %}fa-heart{% else %}fa-heart{% endif %}"></i>
+                                    {% if is_in_watchlist %}Remove from Watchlist{% else %}Add to Watchlist{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                <!-- Bid Form Section -->
+                {% if request.user.is_authenticated %}
+                    {% if request.user != listing_page.owner %}
+                        <div class="bid-form-section">
+                            <form action="" method="POST" class="bid-form">
+                                {% csrf_token %}
+                                {{ form.as_p }}
+                                <button type="submit" class="bid-button">
+                                    <i class="fas fa-gavel"></i> Place Bid
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="login-prompt">
+                        <p><a href="{% url 'login' %}">Log in</a> to place bids or add to watchlist</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description Section -->
+        <div class="listing-description-section">
+            <h2>Description</h2>
+            <div class="description-content">
+                {{ listing_page.description }}
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comments-section">
+            <h2>Comments</h2>
+            
+            {% if request.user.is_authenticated %}
+            <form action="{% url 'listingComment' listing_page.id %}" method="POST" class="comment-form" id="commentForm">
+                {% csrf_token %}
+                <div class="comment-input-wrapper">
+                    <textarea 
+                        name="body" 
+                        placeholder="Add a comment..." 
+                        class="comment-input"
+                        id="commentInput"
+                        rows="1"
+                        required
+                    ></textarea>
+                    <div class="comment-actions">
+                        <button type="button" class="comment-cancel" id="cancelComment">Cancel</button>
+                        <button type="submit" class="comment-submit" id="submitComment" disabled>Comment</button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+        
+            <div class="comments-list">
+                {% for comment in comments %}
+                <div class="comment-card">
+                    <div class="comment-header">
+                        <span class="comment-author">{{ comment.creater }}</span>
+                        <span class="comment-time">{{ comment.created|timesince }} ago</span>
+                    </div>
+                    <p class="comment-body">{{ comment.body }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="listing-sidebar">
+        <div class="bidders-section">
+            <h2>Bid History</h2>
+            {% if last_bid %}
+                <div class="bidders-list">
+                    {% for Bidder in Bidders %}
+                    <div class="bid-card">
+                        <div class="bid-info">
+                            <span class="bidder-name">{{ Bidder.bidder }}</span>
+                            <span class="bid-amount">${{ Bidder.amount }}</span>
+                        </div>
+                        <span class="bid-time">{{ Bidder.created|timesince }} ago</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-bids">
+                    <i class="fas fa-gavel"></i>
+                    <p>No bids yet</p>
+                    <p class="sub-text">Be the first to place a bid!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="notifications-container">
+    {% if notifications %}
+        <h2 class="title">Your Notifications</h2>
+        <hr>
+
+        <div class="notifications-list">
+            {% for notification in notifications %}
+                <div class="notification-card {% if not notification.is_read %}unread{% endif %}">
+                    <!-- Notification Icon -->
+                    <div class="notification-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+
+                    <!-- Notification Content -->
+                    <div class="notification-content">
+                        <div class="notification-header">
+                            <h3>Auction Won!</h3>
+                            <span class="notification-time">{{ notification.created|timesince }} ago</span>
+                        </div>
+
+                        <p class="notification-message">
+                            Congratulations! You've won the auction for
+                            <a href="{% url 'listingPage' notification.listing.id%}" class="listing-link">
+                                "{{ notification.listing }}"
+                            </a>
+                        </p>
+
+                        <!-- Additional Details -->
+                        <div class="notification-details">
+                            <span class="detail-item">
+                                <i class="fas fa-gavel"></i>
+                                Final Price: ${{ notification.listing.primary_price }}
+                            </span>
+                            <span class="detail-item">
+                                <i class="fas fa-calendar"></i>
+                                Won on: {{ notification.created|date:"M d, Y" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- View Button -->
+                    <a href="{% url 'listingPage' notification.listing.id%}" class="view-listing-btn">
+                        View Listing
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-bell empty-icon"></i>
+            <h2>No Notifications</h2>
+            <p>You'll see notifications here when you win auctions or receive updates about your bids.</p>
+            <a href="{% url 'index' %}" class="browse-link">Browse Active Listings</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

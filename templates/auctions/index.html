@@ -1,0 +1,13 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="listings-container">  <!-- Using listings-container class since it has the correct max-width -->
+    <div class="Category-container">
+        {% include 'auctions/category.html' %}
+    </div>
+
+    <h2 class="title">Active Listings</h2>
+    <hr>
+    {% include 'auctions/listings.html' %}
+</div>
+{% endblock %}

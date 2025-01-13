@@ -1,0 +1,114 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Create Account</h2>
+            <p>Please fill in your information</p>
+        </div>
+
+        {% if message %}
+            <div class="message error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ message }}</span>
+                <button class="close-message">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        {% endif %}
+
+        <form id="register-form" class="auth-form" action="{% url 'register' %}" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input class="form-control" 
+                           id="username" 
+                           type="text" 
+                           name="username" 
+                           placeholder="Choose a username"
+                           minlength="3"
+                           maxlength="30"
+                           pattern="^[a-zA-Z0-9_]+$"
+                           title="Username must be between 3-30 characters and can only contain letters, numbers, and underscores"
+                           required
+                           autofocus>
+                </div>
+                <small class="help-text">Username must be between 3-30 characters and can only contain letters, numbers, and underscores</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input class="form-control" 
+                           id="email" 
+                           type="email" 
+                           name="email" 
+                           placeholder="Enter your email"
+                           pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
+                           title="Please enter a valid email address (e.g., user@example.com)"
+                           required>
+                </div>
+                <small class="help-text">We'll send a confirmation link to this email</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-group">
+                    <input class="form-control" 
+                           id="password" 
+                           type="password" 
+                           name="password" 
+                           placeholder="Create a password"
+                           required>
+                    
+                </div>
+                
+                
+            </div>
+
+            <div class="form-group">
+                <label for="confirmation">Confirm Password</label>
+                <div class="input-group">
+                    <input class="form-control" 
+                           id="confirmation" 
+                           type="password" 
+                           name="confirmation" 
+                           placeholder="Confirm your password"
+                           required>
+                </div>
+                <small class="help-text error-message password-match-error" style="display: none;">
+                    Passwords do not match
+                </small>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" 
+                               id="terms" 
+                               name="terms" 
+                               required>
+                        I agree to the <a href="#" class="terms-link">Terms of Service</a> and <a href="#" class="privacy-link">Privacy Policy</a>
+                    </label>
+                </div>
+            </div>
+
+            <button class="submit" type="submit" disabled>
+                <span class="button-text">Create Account</span>
+                <span class="button-loader" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

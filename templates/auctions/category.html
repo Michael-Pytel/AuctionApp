@@ -1,0 +1,62 @@
+{% load static %}
+{% load custom_filters %}
+
+<div class="categories-section">
+    <div class="categories-header">
+        <h2>Categories</h2>
+        <button class="category-toggle" aria-label="Toggle categories">
+            <i class="fas fa-filter"></i>
+        </button>
+    </div>
+    
+    <div class="categories-container">
+        <a href="{% url 'index' %}" class="category-item {% if not selected_category %}active{% endif %}">
+            <i class="fas fa-border-all"></i>
+            <span>All Items</span>
+            {% if total_listings %}
+            <span class="category-count">{{ total_listings }}</span>
+            {% endif %}
+        </a>
+        
+        {% for Category in Categories %}
+        <a href="{% url 'index' %}?q={{ Category.name|urlencode }}" 
+           class="category-item {% if selected_category|lower == Category.name|lower %}active{% endif %}">
+            {% if Category.name == 'Electronics' %}
+                <i class="fas fa-laptop"></i>
+            {% elif Category.name == 'Fashion' %}
+                <i class="fas fa-tshirt"></i>
+            {% elif Category.name == 'Home & Garden' %}
+                <i class="fas fa-home"></i>
+            {% elif Category.name == 'Sports & Outdoors' %}
+                <i class="fas fa-futbol"></i>
+            {% elif Category.name == 'Books & Magazines' %}
+                <i class="fas fa-book"></i>
+            {% elif Category.name == 'Toys & Games' %}
+                <i class="fas fa-gamepad"></i>
+            {% elif Category.name == 'Art & Crafts' %}
+                <i class="fas fa-paint-brush"></i>
+            {% elif Category.name == 'Music & Instruments' %}
+                <i class="fas fa-music"></i>
+            {% elif Category.name == 'Automotive' %}
+                <i class="fas fa-tools"></i>
+            {% elif Category.name == 'Jewelry & Watches' %}
+                <i class="fas fa-gem"></i>
+            {% elif Category.name == 'Movies & Entertainment' %}
+                <i class="fas fa-film"></i>
+            {% elif Category.name == 'Pets & Animals' %}
+                <i class="fas fa-paw"></i>
+            {% elif Category.name == 'Health & Beauty' %}
+                <i class="fas fa-heart"></i>
+            {% elif Category.name == 'Collectibles & Antiques' %}
+                <i class="fas fa-trophy"></i>
+            {% else %}
+                <i class="fas fa-tag"></i>
+            {% endif %}
+            <span>{{ Category.name }}</span>
+            {% if category_counts|get_item:Category.name %}
+            <span class="category-count">{{ category_counts|get_item:Category.name }}</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
