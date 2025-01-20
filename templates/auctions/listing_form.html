@@ -8,7 +8,7 @@
             <p>Fill in the details of your auction item</p>
         </div>
 
-        <form class="auth-form" action="{% url 'CreateListing' %}" method="POST">
+        <form class="auth-form" action="{% url 'create_listing' %}" method="POST">
             {% csrf_token %}
             
             <div class="form-group">
@@ -31,7 +31,7 @@
                 <label for="{{ form.primary_price.id_for_label }}">Starting Price</label>
                 <div class="input-group">
                     <i class="fas fa-dollar-sign"></i>
-                    {{ form.primary_price }}
+                    {{ form.starting_price }}
                 </div>
             </div>
 
@@ -39,7 +39,7 @@
                 <label for="{{ form.imageUrl.id_for_label }}">Image URL</label>
                 <div class="input-group">
                     <i class="fas fa-image"></i>
-                    {{ form.imageUrl }}
+                    {{ form.image_url }}
                 </div>
             </div>
 

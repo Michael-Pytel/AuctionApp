@@ -23,7 +23,7 @@
 
                         <p class="notification-message">
                             Congratulations! You've won the auction for
-                            <a href="{% url 'listingPage' notification.listing.id%}" class="listing-link">
+                            <a href="{% url 'listing_page' notification.listing.id %}" class="listing-link">
                                 "{{ notification.listing }}"
                             </a>
                         </p>
@@ -32,7 +32,7 @@
                         <div class="notification-details">
                             <span class="detail-item">
                                 <i class="fas fa-gavel"></i>
-                                Final Price: ${{ notification.listing.primary_price }}
+                                Final Price: ${{ notification.listing.starting_price}}
                             </span>
                             <span class="detail-item">
                                 <i class="fas fa-calendar"></i>
@@ -42,7 +42,7 @@
                     </div>
 
                     <!-- View Button -->
-                    <a href="{% url 'listingPage' notification.listing.id%}" class="view-listing-btn">
+                    <a href="{% url 'listing_page' notification.listing.id %}" class="view-listing-btn">
                         View Listing
                         <i class="fas fa-chevron-right"></i>
                     </a>

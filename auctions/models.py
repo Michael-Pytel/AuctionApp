@@ -30,17 +30,26 @@ class Category(models.Model):
 
 
 class AuctionListing(models.Model):
+    """
+    Represents an auction listing in the system.
+
+    Attributes:
+        owner (User): User who created the listing
+        title (str): Title of the item being auctioned
+        description (str): Detailed description of the item
+        starting_price (float): Initial asking price
+        image_url (str, optional): URL to item's image
+        is_active (bool): Whether the auction is ongoing
+        category (Category, optional): Item's category
+    """
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='listings')
     title = models.CharField(max_length=50, db_index=True)
     description = models.CharField(max_length=500, null=True, blank=True)
-    primary_price = models.FloatField()
-    imageUrl = models.URLField(null=True, blank=True)
+    starting_price = models.FloatField()
+    image_url = models.URLField(null=True, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
-
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='categoryListings', null=True,
-                                 blank=True)
-
-    # take a snapshot on every time we save an item/and when we create it
+    category = models.ForeignKey(Category, on_delete=models.CASCADE,
+                                 related_name='category_listings', null=True, blank=True)
     updated = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -67,7 +76,7 @@ class Watchlist(models.Model):
 
 
 class Comment(models.Model):
-    creater = models.ForeignKey(User, on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
     listing = models.ForeignKey(AuctionListing, on_delete=models.CASCADE)
     body = models.CharField(max_length=500)
 

@@ -1,11 +1,11 @@
 <div class="listings-grid">
     {% for listing in listings %}
     <article class="listing-card">
-        <a href="{% url 'listingPage' listing.id%}" class="listing-link">
+        <a href="{% url 'listing_page' listing.id %}" class="listing-link">
             <!-- Image Section -->
             <div class="listing-image">
-                {% if listing.imageUrl %}
-                <img src="{{ listing.imageUrl }}" alt="{{ listing.title }}" loading="lazy">
+                {% if listing.image_url %}
+                <img src="{{ listing.image_url }}" alt="{{ listing.title }}" loading="lazy">
                 {% else %}
                 <img src="https://assets.fishersci.com/TFS-Assets/CCG/product-images/default.jpg-650.jpg" 
                      alt="Default product image" loading="lazy">
@@ -15,7 +15,7 @@
                 {% if listing.max_bid %}
                 <span class="price-badge bid-price">${{ listing.max_bid }}</span>
                 {% else %}
-                <span class="price-badge start-price">${{ listing.primary_price }}</span>
+                <span class="price-badge start-price">${{ listing.starting_price }}</span>
                 {% endif %}
             </div>
 
