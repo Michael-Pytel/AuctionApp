@@ -7,8 +7,8 @@
         <!-- Image and Primary Info Section -->
         <div class="listing-header-section">
             <div class="listing-image-container">
-                {% if listing_page.imageUrl %}
-                <img src="{{ listing_page.imageUrl }}" alt="{{ listing_page.title }}" class="listing-main-image">
+                {% if listing_page.image_url %}
+                <img src="{{ listing_page.image_url }}" alt="{{ listing_page.title }}" class="listing-main-image">
                 {% else %}
                 <img src="https://assets.fishersci.com/TFS-Assets/CCG/product-images/default.jpg-650.jpg" 
                      alt="Default product image" class="listing-main-image">
@@ -35,7 +35,7 @@
                     {% else %}
                     <div class="starting-price">
                         <span class="price-label">Starting Price</span>
-                        <span class="price-amount">${{ listing_page.primary_price }}</span>
+                        <span class="price-amount">${{ listing_page.starting_price }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -44,7 +44,7 @@
                 <div class="listing-actions">
                     {% if request.user.is_authenticated %}
                         {% if request.user == listing_page.owner %}
-                            <form action="{% url 'AuctionControl' listing_page.id %}" method="POST" class="action-form">
+                            <form action="{% url 'auction_control' listing_page.id %}" method="POST" class="action-form">
                                 {% csrf_token %}
                                 <button type="submit" class="action-button {% if listing_page.is_active %}close-button{% else %}activate-button{% endif %}">
                                     {% if listing_page.is_active %}
@@ -55,7 +55,7 @@
                                 </button>
                             </form>
                         {% else %}
-                            <form action="{% if is_in_watchlist %}{% url 'removeWatchlist' listing_page.id %}{% else %}{% url 'addWatchlist' listing_page.id %}{% endif %}" 
+                            <form action="{% if is_in_watchlist %}{% url 'remove_watchlist' listing_page.id %}{% else %}{% url 'add_watchlist' listing_page.id %}{% endif %}" 
                                   method="POST" class="action-form">
                                 {% csrf_token %}
                                 <button type="submit" class="action-button {% if is_in_watchlist %}remove-watchlist{% else %}add-watchlist{% endif %}">
@@ -101,7 +101,7 @@
             <h2>Comments</h2>
             
             {% if request.user.is_authenticated %}
-            <form action="{% url 'listingComment' listing_page.id %}" method="POST" class="comment-form" id="commentForm">
+            <form action="{% url 'listing_comment' listing_page.id %}" method="POST" class="comment-form" id="commentForm">
                 {% csrf_token %}
                 <div class="comment-input-wrapper">
                     <textarea 
@@ -124,7 +124,7 @@
                 {% for comment in comments %}
                 <div class="comment-card">
                     <div class="comment-header">
-                        <span class="comment-author">{{ comment.creater }}</span>
+                        <span class="comment-author">{{ comment.creator }}</span>
                         <span class="comment-time">{{ comment.created|timesince }} ago</span>
                     </div>
                     <p class="comment-body">{{ comment.body }}</p>
