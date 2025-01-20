@@ -173,37 +173,53 @@ def place_bid(request, listing_page, bid_amount):
     Returns:
         tuple: (bool, str) - (success status, message)
     """
+    # Basic validation checks
+    if not listing_page.is_active:
+        return False, "This auction is closed"
+
+    if listing_page.owner == request.user:
+        return False, "You cannot bid on your own listing"
+
+    # Validate bid amount is numeric and positive
+    try:
+        bid_amount = float(bid_amount)
+        if bid_amount <= 0:
+            return False, "Bid amount must be positive"
+    except (TypeError, ValueError):
+        return False, "Invalid bid amount"
+
     # Rate limiting check
     cache_key = f'user_{request.user.id}_bid_count'
     bid_count = cache.get(cache_key, 0)
 
-    if bid_count > 10:  # Max 10 bids per minute
-        return False, "Too many bid attempts. Please wait a minute."
+    if bid_count >= 10:
+        return False, "Too many bid attempts. Please wait a minute"
 
     # Get the last bid for validation
-    last_bid = Bid.objects.filter(listing=listing_page).first()
+    last_bid = Bid.objects.filter(listing=listing_page).order_by('-amount').first()
 
     # Check if the user is trying to outbid themselves
     if last_bid and last_bid.bidder == request.user:
         return False, "You already have the highest bid on this item"
 
-    # Validate bid amount
-    if not last_bid and bid_amount <= listing_page.primary_price:
-        return False, "Bid must be higher than the primary price"
+    # Validate bid amount against starting price and current highest bid
+    if not last_bid and bid_amount <= listing_page.starting_price:
+        return False, f"Bid must be higher than the starting price (${listing_page.starting_price})"
     elif last_bid and bid_amount <= last_bid.amount:
-        return False, "Bid must be higher than the current highest bid"
+        return False, f"Bid must be higher than the current highest bid (${last_bid.amount})"
 
     try:
-        # Create and save the new bid
-        bid = Bid(
-            bidder=request.user,
-            listing=listing_page,
-            amount=bid_amount
-        )
-        bid.save()
+        # Create and save the new bid within a transaction
+        from django.db import transaction
+        with transaction.atomic():
+            bid = Bid.objects.create(
+                bidder=request.user,
+                listing=listing_page,
+                amount=bid_amount
+            )
 
-        # Increment the bid count in cache
-        cache.set(cache_key, bid_count + 1, 60)  # Expires in 60 seconds
+            # Update cache for rate limiting
+            cache.set(cache_key, bid_count + 1, 60)  # Expires in 60 seconds
 
         return True, "Bid placed successfully!"
 
@@ -250,19 +266,38 @@ def handle_bid_submission(request, listing_page):
         else:
             messages.warning(request, message)
 
-    return redirect("listing_page", pk=listing_page.id)
+    return redirect("listing_page", listing_id=listing_page.id)
+
 
 # user add a comment
-def listing_comment(request, pk):
-    listing_page = AuctionListing.objects.get(id=pk)
+@login_required(login_url='login')
+def listing_comment(request, listing_id):
+    listing_page = get_object_or_404(AuctionListing, id=listing_id)
     if request.method == "POST":
+        comment_body = request.POST.get('body', '').strip()
+
+        # Validate comment is not empty
+        if not comment_body:
+            messages.error(request, "Comment cannot be empty")
+            return redirect("listing_page", listing_id=listing_id)
+
+        # Validate comment length
+        if len(comment_body) > 500:
+            messages.error(request, "Comment is too long (maximum 500 characters)")
+            return redirect("listing_page", listing_id=listing_id)
+
+        # Validate listing is active
+        if not listing_page.is_active:
+            messages.error(request, "Cannot comment on closed listings")
+            return redirect("listing_page", listing_id=listing_id)
+
         comment = Comment.objects.create(
-            creater=request.user,
+            creator=request.user,
             listing=listing_page,
-            body=request.POST.get('body')
+            body=comment_body
         )
 
-    return redirect("listingPage", pk=listing_page.id)
+    return redirect("listing_page", listing_id=listing_id)
 
 
 # Watchlist view
@@ -286,41 +321,49 @@ def watchlist_page(request):
 
 # add
 @login_required(login_url='login')
-def add_watchlist(request, pk):
-    listing_page = AuctionListing.objects.get(id=pk)
+def add_watchlist(request, listing_id):
     if request.method == "POST":
+        listing_page = get_object_or_404(AuctionListing, id=listing_id)
+
+        # Check if already in watchlist
+        if Watchlist.objects.filter(user=request.user, listing=listing_page).exists():
+            messages.warning(request, "Item already in watchlist")
+            return redirect("listing_page", listing_id=listing_id)
+
+        # Validate owner isn't adding their own listing
+        if listing_page.owner == request.user:
+            messages.warning(request, "Cannot add your own listing to watchlist")
+            return redirect("listing_page", listing_id=listing_id)
+
         Watchlist.objects.create(user=request.user, listing=listing_page)
-        return redirect("listingPage", pk=listing_page.id)
+        messages.success(request, "Added to watchlist")
+    return redirect("listing_page", listing_id=listing_id)
 
 
 # remove
 @login_required(login_url='login')
-def remove_watchlist(request, pk):
-    listing_page = AuctionListing.objects.get(id=pk)
+def remove_watchlist(request, listing_id):  # Changed from pk
+    listing_page = get_object_or_404(AuctionListing, id=listing_id)
     if request.method == "POST":
         Watchlist.objects.filter(user=request.user, listing=listing_page).delete()
-        return redirect("listingPage", pk=listing_page.id)
+        return redirect("listing_page", listing_id=listing_id)
 
 
 # Auction Control
 @login_required(login_url='login')
-def auction_control(request, listing_id):  # Renamed from AuctionControl
-    """Handle activation/deactivation of auctions."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(['POST'])
-
+def auction_control(request, listing_id):
     listing_page = get_object_or_404(AuctionListing, id=listing_id)
 
     if not listing_page.is_active:
         listing_page.is_active = True
         listing_page.save()
         messages.success(request, "Auction activated successfully.")
-        return redirect("listing_page", pk=listing_id)
+        return redirect("listing_page", listing_id=listing_id)
 
     last_bid = get_last_bid(listing_page)
     message = handle_auction_close(listing_page, last_bid)
     messages.success(request, message)
-    return redirect("listing_page", pk=listing_id)
+    return redirect("listing_page", listing_id=listing_id)
 
 
 # Notifications view
