@@ -1,70 +1,52 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.db.models import Q
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, redirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed
+from django.shortcuts import render
 from django.urls import reverse
 from django.core.cache import cache
-from django.shortcuts import redirect
 from .models import User, Category, AuctionListing, Bid, Comment, Watchlist, Notification
 from .forms import ListingForm, BidForm
-
 from django.utils import timezone
-# django flash messages
 from django.contrib import messages
 from datetime import timedelta
 from django.conf import settings
 import secrets
 from django.core.mail import send_mail
-from .utils import send_confirmation_email  # This will work now
-
+from .utils import send_confirmation_email
+from django.shortcuts import get_object_or_404, redirect
+from .utils import (annotate_listing_with_max_bid, get_listing_comments,
+                    get_last_bid, get_listing_bidders, check_watchlist_status,
+                    handle_auction_close)
 
 
 def index(request):
-    # Get the selected category from query parameter
+    """Display active listings, optionally filtered by category."""
     selected_category = request.GET.get('q', '')
 
-    # Get all active listings filtered by category if selected
+    listings = AuctionListing.objects.filter(is_active=True)
     if selected_category:
-        listings = AuctionListing.objects.filter(
-            is_active=True,
-            category__name=selected_category
-        )
-    else:
-        listings = AuctionListing.objects.filter(is_active=True)
+        listings = listings.filter(category__name=selected_category)
 
-    # Get the highest bid for each listing
     for listing in listings:
-        highest_bid = Bid.objects.filter(listing=listing).first()
-        listing.max_bid = highest_bid.amount if highest_bid else None
-
-    # Get all categories
-    Categories = Category.objects.all()
-
-    # Calculate category counts
-    category_counts = {}
-    for category in Categories:
-        category_counts[category.name] = AuctionListing.objects.filter(
-            category=category,
-            is_active=True
-        ).count()
-
-    # Get total active listings count
-    total_listings = AuctionListing.objects.filter(is_active=True).count()
+        annotate_listing_with_max_bid(listing)
 
     context = {
         'listings': listings,
-        'Categories': Categories,
-        'category_counts': category_counts,
-        'total_listings': total_listings,
+        'Categories': Category.objects.all(),
+        'category_counts': {
+            category.name: AuctionListing.objects.filter(
+                category=category, is_active=True).count()
+            for category in Category.objects.all()
+        },
+        'total_listings': AuctionListing.objects.filter(is_active=True).count(),
         'selected_category': selected_category
     }
     return render(request, "auctions/index.html", context)
 
 
 @login_required(login_url='login')
-def Profile(request):
+def profile(request):
     listings = AuctionListing.objects.filter(owner=request.user)
 
     # Update the max_bid attribute for each listing
@@ -138,7 +120,7 @@ def register(request):
 
 # a view for adding listing
 @login_required(login_url='login')
-def CreateListing(request):
+def create_listing(request):
     form = ListingForm()
 
     if request.method == 'POST':
@@ -150,7 +132,7 @@ def CreateListing(request):
             return redirect('index')
 
     context = {'form': form}
-    return render(request, 'auctions/Listing_form.html', context)
+    return render(request, 'auctions/listing_form.html', context)
 
 
 def confirm_email(request, token):
@@ -229,43 +211,49 @@ def place_bid(request, listing_page, bid_amount):
         return False, f"Error processing bid: {str(e)}"
 
 
-def listingPage(request, pk):
-    listing_page = AuctionListing.objects.get(id=pk)
-    comments = Comment.objects.filter(listing=listing_page)
-    # get the last bid for this listing, if any
-    last_bid = Bid.objects.filter(listing=listing_page).first()
-    # get the Bidders in this lisitng
-    Bidders = Bid.objects.filter(listing=listing_page)
+def listing_page(request, listing_id):  # Renamed from listingPage
+    """Display details of a specific listing."""
+    listing_page = get_object_or_404(AuctionListing, id=listing_id)
+    context = {
+        'listing_page': listing_page,
+        'comments': get_listing_comments(listing_page),
+        'last_bid': get_last_bid(listing_page),
+        'Bidders': get_listing_bidders(listing_page),
+        'is_in_watchlist': check_watchlist_status(request.user, listing_page),
+        'form': BidForm()
+    }
 
-    # is the listing added to the watchlist
-    is_in_watchlist = False
-    if request.user.is_authenticated:
-        is_in_watchlist = Watchlist.objects.filter(user=request.user, listing=listing_page).exists()
-
-    # if user make a bid 
     if request.method == 'POST':
-        form = BidForm(request.POST)
-        if form.is_valid():
-            bid_amount = form.cleaned_data['amount']
+        return handle_bid_submission(request, listing_page)
 
-            success, message = place_bid(request, listing_page, bid_amount)
-
-            if success:
-                messages.success(request, message)
-                return redirect("listingPage", pk=listing_page.id)
-            else:
-                messages.warning(request, message)
-    else:
-        form = BidForm()
-
-    context = {'listing_page': listing_page, 'form': form,
-               'last_bid': last_bid, 'comments': comments,
-               'Bidders': Bidders, 'is_in_watchlist': is_in_watchlist}
     return render(request, 'auctions/listing_page.html', context)
 
 
+def handle_bid_submission(request, listing_page):
+    """
+    Handle the submission of a new bid.
+
+    Args:
+        request: The HTTP request object
+        listing_page: The AuctionListing instance
+
+    Returns:
+        HttpResponse: Redirect to the listing page with appropriate message
+    """
+    form = BidForm(request.POST)
+    if form.is_valid():
+        bid_amount = form.cleaned_data['amount']
+        success, message = place_bid(request, listing_page, bid_amount)
+
+        if success:
+            messages.success(request, message)
+        else:
+            messages.warning(request, message)
+
+    return redirect("listing_page", pk=listing_page.id)
+
 # user add a comment
-def listingComment(request, pk):
+def listing_comment(request, pk):
     listing_page = AuctionListing.objects.get(id=pk)
     if request.method == "POST":
         comment = Comment.objects.create(
@@ -279,7 +267,7 @@ def listingComment(request, pk):
 
 # Watchlist view
 @login_required(login_url='login')
-def watchlistPage(request):
+def watchlist_page(request):
     # get the objects associated with the watchlist of the user
     watched_listings = Watchlist.objects.filter(user=request.user).values('listing')
     # get the primary key of the listings in the watched_listings queryset
@@ -298,7 +286,7 @@ def watchlistPage(request):
 
 # add
 @login_required(login_url='login')
-def addWatchlist(request, pk):
+def add_watchlist(request, pk):
     listing_page = AuctionListing.objects.get(id=pk)
     if request.method == "POST":
         Watchlist.objects.create(user=request.user, listing=listing_page)
@@ -307,7 +295,7 @@ def addWatchlist(request, pk):
 
 # remove
 @login_required(login_url='login')
-def removeWatchlist(request, pk):
+def remove_watchlist(request, pk):
     listing_page = AuctionListing.objects.get(id=pk)
     if request.method == "POST":
         Watchlist.objects.filter(user=request.user, listing=listing_page).delete()
@@ -316,45 +304,33 @@ def removeWatchlist(request, pk):
 
 # Auction Control
 @login_required(login_url='login')
-def AuctionControl(request, pk):
-    listing_page = AuctionListing.objects.get(id=pk)
-    if request.method == "POST":
-        if listing_page.is_active:  # if it's active --> close it
-            # check if there are any bidders
-            last_bid = Bid.objects.filter(listing=listing_page).first()
-            if last_bid:  # there is a bidder --> process winner notification and ownership transfer
-                listing_page.is_active = False
-                listing_page.owner = last_bid.bidder
-                # Set the primary_price to the amount of the last bid
-                listing_page.primary_price = last_bid.amount
-                listing_page.save()
-                # Delete all previous bids related to this listing
-                Bid.objects.filter(listing=listing_page).delete()
-                # CREATE A NOTIFICATION sented to the winner
-                notification = Notification.objects.create(user=last_bid.bidder, listing=listing_page)
-                messages.success(request,
-                                 f"You have been successfully Closed this auction, the new owner of this auction is @{last_bid.bidder}")
-            else:  # no bidders --> just close the auction
-                listing_page.is_active = False
-                listing_page.save()
-                messages.success(request, "You have been successfully Closed this auction.")
+def auction_control(request, listing_id):  # Renamed from AuctionControl
+    """Handle activation/deactivation of auctions."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(['POST'])
 
-            return redirect("listingPage", pk=listing_page.id)
-        else:  # if it's not active --> activate it
-            listing_page.is_active = True
-            listing_page.save()
-            messages.success(request, "You have been successfully Activate this auction.")
-            return redirect("listingPage", pk=listing_page.id)
+    listing_page = get_object_or_404(AuctionListing, id=listing_id)
+
+    if not listing_page.is_active:
+        listing_page.is_active = True
+        listing_page.save()
+        messages.success(request, "Auction activated successfully.")
+        return redirect("listing_page", pk=listing_id)
+
+    last_bid = get_last_bid(listing_page)
+    message = handle_auction_close(listing_page, last_bid)
+    messages.success(request, message)
+    return redirect("listing_page", pk=listing_id)
 
 
 # Notifications view
 @login_required(login_url='login')
-def Notifications(request):
+def notifications(request):
     notifications = Notification.objects.filter(user=request.user)
 
     notifications.update(is_read=True)
     context = {"notifications": notifications}
-    return render(request, 'auctions/Notifications.html', context)
+    return render(request, 'auctions/notifications.html', context)
 
 
 def password_reset_request(request):
@@ -421,5 +397,3 @@ def password_reset_confirm(request, token):
     except User.DoesNotExist:
         messages.error(request, "Invalid password reset link.")
         return HttpResponseRedirect(reverse("login"))
-
-

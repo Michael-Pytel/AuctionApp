@@ -37,19 +37,19 @@
                             </li>
                             {% if user.is_authenticated %}
                                 <li>
-                                    <a href="{% url 'CreateListing' %}" class="nav-link">
+                                    <a href="{% url 'create_listing' %}" class="nav-link">
                                         <i class="fas fa-plus-circle"></i>
                                         Create Listing
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'watchlistPage' %}" class="nav-link">
+                                    <a href="{% url 'watchlist' %}" class="nav-link">
                                         <i class="fas fa-heart"></i>
                                         Watchlist
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'Notifications' %}" class="nav-link {% if user.unread_notification_count > 0 %}has-notification{% endif %}">
+                                    <a href="{% url 'notifications' %}" class="nav-link {% if user.unread_notification_count > 0 %}has-notification{% endif %}">
                                         <i class="fas fa-bell"></i>
                                         Notifications
                                         {% if user.unread_notification_count > 0 %}
@@ -70,7 +70,7 @@
                                     </button>
                                     <ul class="user-dropdown">
                                         <li>
-                                            <a href="{% url 'Profile' %}">
+                                            <a href="{% url 'profile' %}">
                                                 <i class="fas fa-user"></i>
                                                 Profile
                                             </a>
