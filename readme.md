@@ -38,7 +38,7 @@ A Django-based web application for creating and managing online auctions with re
 
 1. Clone the repository:
 ```bash
-git clone [[repository-url]](https://github.com/Michael-Pytel/AuctionApp.git)
+git clone https://github.com/Michael-Pytel/AuctionApp.git
 cd AuctionApp
 ```
 
