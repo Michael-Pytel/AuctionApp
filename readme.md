@@ -38,7 +38,7 @@ A Django-based web application for creating and managing online auctions with re
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone [[repository-url]](https://github.com/Michael-Pytel/AuctionApp.git)
 cd AuctionApp
 ```
 
@@ -50,16 +50,16 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 3. Install required packages:
 ```bash
-pip install django
+pip install -r requirements.txt
 ```
 
-4. Set up the database:
+4. Set up the database (if you want a new one):
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-5. Create a superuser (admin):
+5. Create a superuser (admin) (if you don't use the db provided):
 ```bash
 python manage.py createsuperuser
 ```
@@ -70,6 +70,16 @@ python manage.py runserver
 ```
 
 The application will be available at `http://localhost:8000`
+
+7. Run tests (for a full coverage report run this):
+```bash
+coverage run --source='.' manage.py test auctions.tests
+coverage report
+```
+without coverage
+```bash
+python manage.py test auctions.tests
+```
 
 ## Project Structure
 
