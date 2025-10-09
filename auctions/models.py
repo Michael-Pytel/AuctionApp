@@ -1,9 +1,19 @@
 from django.contrib.auth.models import AbstractUser
 from django.utils.functional import cached_property
 from django.db import models
-
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 
 # models.py
+
+
+def validate_image_url(value):
+    """Validate that URL ends with an image extension"""
+    valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+    if not any(value.lower().endswith(ext) for ext in valid_extensions):
+        raise ValidationError('URL must point to an image file (.jpg, .png, etc.)')
+
+
 class User(AbstractUser):
     email_confirmed = models.BooleanField(default=False)
     confirmation_token = models.CharField(max_length=64, blank=True, null=True)
@@ -46,7 +56,12 @@ class AuctionListing(models.Model):
     title = models.CharField(max_length=50, db_index=True)
     description = models.CharField(max_length=500, null=True, blank=True)
     starting_price = models.FloatField()
-    image_url = models.URLField(null=True, blank=True)
+    image_url = models.URLField(
+        max_length=500,
+        validators=[validate_image_url],
+        blank=True,
+        null=True
+    )
     is_active = models.BooleanField(default=True, db_index=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE,
                                  related_name='category_listings', null=True, blank=True)
@@ -58,6 +73,7 @@ class AuctionListing(models.Model):
 
     def __str__(self):
         return self.title
+
 
 
 class Watchlist(models.Model):
