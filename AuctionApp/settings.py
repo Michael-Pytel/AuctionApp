@@ -77,8 +77,16 @@ WSGI_APPLICATION = 'AuctionApp.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='auctionapp_db'),
+        'USER': config('DB_USER', default='auction_user'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
 
@@ -135,6 +143,7 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'noreply@localhost'
     SITE_URL = 'localhost:8000'
+    EMAIL_FAIL_SILENTLY = False
 else:
     # Production: Use SendGrid
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -146,27 +155,26 @@ else:
     DEFAULT_FROM_EMAIL = config('EMAIL_FROM', default='noreply@michalpytel.com.pl')
     SITE_URL = config('SITE_URL', default='michalpytel.com.pl')
 
-# Optional: Reply-to email
-DEFAULT_REPLY_TO = config('EMAIL_REPLY_TO', default=DEFAULT_FROM_EMAIL)
-
-# Email timeout (optional but recommended)
-EMAIL_TIMEOUT = 10  # seconds
-
-# For better error messages during development
-if DEBUG:
-    EMAIL_FAIL_SILENTLY = False
-else:
-    EMAIL_FAIL_SILENTLY = True  # Set to True in production if you don't want email errors to break your app
-
-
-
-
-
-if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+    EMAIL_FAIL_SILENTLY = True
+
+# Optional: Reply-to email
+DEFAULT_REPLY_TO = config('EMAIL_REPLY_TO', default=DEFAULT_FROM_EMAIL)
+
+# Email timeout (optional but recommended)
+EMAIL_TIMEOUT = 10  # seconds
+
+
+
+
+
+
+
+
 
