@@ -129,14 +129,38 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings for development (prints to console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 1025
-EMAIL_HOST_USER = ''
-EMAIL_HOST_PASSWORD = ''
+# EMAIL CONFIGURATION
+if DEBUG:
+    # Development: Print emails to console for testing
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@localhost'
+    SITE_URL = 'localhost:8000'
+else:
+    # Production: Use SendGrid
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'apikey'  # This is literal "apikey", not your email
+    EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY')
+    DEFAULT_FROM_EMAIL = config('EMAIL_FROM', default='noreply@michalpytel.com.pl')
+    SITE_URL = config('SITE_URL', default='michalpytel.com.pl')
+
+# Optional: Reply-to email
+DEFAULT_REPLY_TO = config('EMAIL_REPLY_TO', default=DEFAULT_FROM_EMAIL)
+
+# Email timeout (optional but recommended)
+EMAIL_TIMEOUT = 10  # seconds
+
+# For better error messages during development
+if DEBUG:
+    EMAIL_FAIL_SILENTLY = False
+else:
+    EMAIL_FAIL_SILENTLY = True  # Set to True in production if you don't want email errors to break your app
 
 
-SITE_URL = 'localhost:8000'
+
+
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
