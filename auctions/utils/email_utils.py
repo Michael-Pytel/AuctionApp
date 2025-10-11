@@ -1,11 +1,16 @@
 # email_utils.py
-from django.core.mail import send_mail
-from django.conf import settings
+
 import secrets
+
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.sites.shortcuts import get_current_site
 from django.conf import settings
+from django.contrib import messages
+from auctions.models import User
 
 
 def send_confirmation_email(user, request=None):

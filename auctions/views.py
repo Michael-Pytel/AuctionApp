@@ -1,18 +1,21 @@
+import secrets
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.core.cache import cache
+
+from AuctionApp import settings
 from .models import User, Category, AuctionListing, Bid, Comment, Watchlist, Notification
 from .forms import ListingForm, BidForm
 from django.utils import timezone
 from django.contrib import messages
 from datetime import timedelta
-from django.conf import settings
-import secrets
-from django.core.mail import send_mail
+
 from .utils import send_confirmation_email
 from django.shortcuts import get_object_or_404, redirect
 from .utils import (annotate_listing_with_max_bid, get_listing_comments,
@@ -376,42 +379,6 @@ def notifications(request):
     return render(request, 'auctions/notifications.html', context)
 
 
-def password_reset_request(request):
-    if request.method == "POST":
-        email = request.POST.get('email')
-        try:
-            user = User.objects.get(email=email)
-            # Generate token
-            token = secrets.token_urlsafe(48)
-            user.confirmation_token = token
-            user.token_created_at = timezone.now()
-            user.save()
-
-            # Send email
-            reset_link = f"http://{settings.SITE_URL}/password-reset/{token}"
-            send_mail(
-                'Password Reset Request',
-                f'''Hi {user.username},
-
-You requested a password reset. Click this link to reset your password:
-{reset_link}
-
-This link will expire in 24 hours.
-
-If you did not request a password reset, please ignore this email.''',
-                'noreply@auctionsite.com',
-                [user.email],
-                fail_silently=False,
-            )
-
-            messages.success(request, "Password reset instructions have been sent to your email.")
-            return HttpResponseRedirect(reverse("login"))
-        except User.DoesNotExist:
-            messages.error(request, "No user found with that email address.")
-
-    return render(request, "auctions/password_reset.html")
-
-
 def password_reset_confirm(request, token):
     try:
         user = User.objects.get(confirmation_token=token)
@@ -440,3 +407,100 @@ def password_reset_confirm(request, token):
     except User.DoesNotExist:
         messages.error(request, "Invalid password reset link.")
         return HttpResponseRedirect(reverse("login"))
+
+
+from django.contrib.sites.shortcuts import get_current_site
+
+
+def password_reset_request(request):
+    if request.method == "POST":
+        email = request.POST.get('email')
+        try:
+            user = User.objects.get(email=email)
+
+            # Generate token
+            token = secrets.token_urlsafe(48)
+            user.confirmation_token = token
+            user.token_created_at = timezone.now()
+            user.save()
+
+            # FIX: Build URL correctly like confirmation email does
+            current_site = get_current_site(request)
+            domain = current_site.domain
+            protocol = 'https' if request.is_secure() else 'http'
+            reset_link = f"{protocol}://{domain}/password-reset/{token}"
+
+            # Plain text message
+            plain_message = f'''Hi {user.username},
+
+You requested a password reset. Click this link to reset your password:
+{reset_link}
+
+This link will expire in 24 hours.
+
+If you did not request a password reset, please ignore this email.'''
+
+            # HTML message (optional but recommended)
+            html_message = f'''
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2c3e50;">Password Reset Request</h2>
+
+        <p>Hi {user.username},</p>
+
+        <p>You requested a password reset. Click the button below to reset your password:</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{reset_link}" 
+               style="background-color: #e74c3c; color: white; padding: 12px 30px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block; 
+                      font-weight: bold;">
+                Reset Password
+            </a>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+            Or copy and paste this link into your browser:<br>
+            <a href="{reset_link}" style="color: #e74c3c; word-break: break-all;">
+                {reset_link}
+            </a>
+        </p>
+
+        <p style="color: #999; font-size: 12px;">
+            This link will expire in 24 hours.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+
+        <p style="color: #999; font-size: 12px;">
+            If you did not request a password reset, please ignore this email.
+        </p>
+    </div>
+</body>
+</html>
+            '''
+
+            # FIX: Add try-catch around send_mail
+            try:
+                send_mail(
+                    subject='Password Reset Request',
+                    message=plain_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                messages.success(request, "Password reset instructions have been sent to your email.")
+                return HttpResponseRedirect(reverse("login"))
+
+            except Exception as e:
+                # Log the actual error for debugging
+                print(f"Error sending password reset email: {e}")
+                messages.error(request, "Failed to send password reset email. Please try again later.")
+                return render(request, "auctions/password_reset.html")
+
+        except User.DoesNotExist:
+            messages.error(request, "No user found with that email address.")
+
+    return render(request, "auctions/password_reset.html")
