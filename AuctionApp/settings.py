@@ -155,12 +155,12 @@ else:
     DEFAULT_FROM_EMAIL = config('EMAIL_FROM', default='noreply@michalpytel.com.pl')
     SITE_URL = config('SITE_URL', default='michalpytel.com.pl')
 
-    # SECURE_SSL_REDIRECT = True
-    # SESSION_COOKIE_SECURE = True
-    # CSRF_COOKIE_SECURE = True
-    # SECURE_HSTS_SECONDS = 31536000
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
     EMAIL_FAIL_SILENTLY = True
 
