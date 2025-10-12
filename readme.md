@@ -2,7 +2,7 @@
 
 A Django 5.1 auction platform with real-time bidding, deployed on Google Cloud Platform with production-grade infrastructure.
 
-**Live Demo**: [AuctionApp - link](michalpytel.com.pl)
+**Live Demo**: [AuctionApp - link](https://michalpytel.com.pl)
 
 ---
 
